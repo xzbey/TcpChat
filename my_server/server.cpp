@@ -9,12 +9,16 @@ Server::Server() {
     }
 }
 
-void Server::sendToClient(QString buffer) {
-    data.clear();
-    QDataStream stream(&data, QIODevice::WriteOnly);
-    stream << buffer;
-    //socket->write(data);
+Server::~Server() {
 
+}
+
+void Server::sendToClient(Datagram* datagram) {
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream << *datagram;
+    //socket->write(data);
+    qDebug() << "sending datagram for" << socketList.size() << "clients /" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
     for (auto& it: socketList) {
         it->write(data);
     }
@@ -23,8 +27,9 @@ void Server::sendToClient(QString buffer) {
 void Server::incomingConnection(qintptr socketDescriptor) {
     QTcpSocket* socket = new QTcpSocket(this);
     socket->setSocketDescriptor(socketDescriptor);
+
     connect(socket, &QTcpSocket::readyRead, this, &Server::slotReadyRead);
-    connect(socket, &QTcpSocket::disconnected, this, [this, socket](){
+    connect(socket, &QTcpSocket::disconnected, socket, [this, socket](){
         qDebug() << "one disconnect / size: " << socketList.size() - 1;
         socketList.removeOne(socket);
         socket->deleteLater();
@@ -38,10 +43,11 @@ void Server::slotReadyRead() {
     QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
     QDataStream stream(socket);
     if (stream.status() == QDataStream::Ok) {
-        QString buffer;
-        stream >> buffer;
-        qDebug() << "reading datastream /" << buffer;
-        sendToClient(buffer);
+        Datagram* datagram = new Datagram;
+        stream >> *datagram;
+        qDebug() << "reading datagram /" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
+        sendToClient(datagram);
+        delete datagram;
     }
     else {
         qDebug() << "error in slotReadyRead";

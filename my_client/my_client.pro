@@ -13,10 +13,13 @@ SOURCES += \
     mainwindow.cpp
 
 HEADERS += \
+    datagram.h \
     mainwindow.h
 
 FORMS += \
     mainwindow.ui
+
+INCLUDEPATH += ../common
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

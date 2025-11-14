@@ -6,6 +6,7 @@
 #include <QDataStream>
 #include <QObject>
 #include <QCloseEvent>
+#include "datagram.h"
 
 
 class Server: public QTcpServer
@@ -13,12 +14,12 @@ class Server: public QTcpServer
     Q_OBJECT
 public:
     Server();
+    ~Server();
 
 private:
-    QByteArray data;
     QList<QTcpSocket*> socketList;
 
-    void sendToClient(QString buffer);
+    void sendToClient(Datagram* datagram);
 
 public slots:
     void incomingConnection(qintptr socketDescriptor);

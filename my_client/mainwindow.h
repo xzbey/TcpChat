@@ -5,6 +5,9 @@
 #include <QTcpSocket>
 #include <QProcess>
 #include <QCloseEvent>
+#include <QColorDialog>
+#include <QAbstractSocket>
+#include "datagram.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -21,7 +24,7 @@ public:
     ~MainWindow();
 
 protected:
-    void closeEvent(QCloseEvent*);
+    void closeEvent(QCloseEvent*) override;
 
 private slots:
     void on_btn_connect_clicked();
@@ -34,12 +37,15 @@ private slots:
 
     void on_newProcess_clicked();
 
+    void on_message_textEdited(const QString &arg1);
+
 private:
     Ui::MainWindow *ui;
-    QTcpSocket* socket;
-    QByteArray data;
+    QTcpSocket* socket = 0;
     QList<QProcess*>processes;
+    Datagram*datagram = 0;
 
-    void sendToServer(QString buffer);
+    QColor ColorDialog();
+    void sendToServer();
 };
 #endif // MAINWINDOW_H
