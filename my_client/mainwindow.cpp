@@ -53,6 +53,10 @@ void MainWindow::connect_socket() {
         ui->btn_connect->setEnabled(1);
         ui->btn_send->setEnabled(0);
         ui->changeHostAddress->setVisible(1);
+        if (ui->changeHostAddress->isChecked()) {
+            ui->ip->setVisible(1);
+            ui->port->setVisible(1);
+        }
         ui->chat->append("<table align='center'>"
                          "<tr><td style='color:red; text-align:center; padding: 10px'>"
                          "<b><i>Disconnected from server.</i></b>"
@@ -72,6 +76,10 @@ void MainWindow::connect_socket() {
         ui->btn_connect->setEnabled(1);
         ui->btn_send->setEnabled(0);
         ui->changeHostAddress->setVisible(1);
+        if (ui->changeHostAddress->isChecked()) {
+            ui->ip->setVisible(1);
+            ui->port->setVisible(1);
+        }
         ui->chat->append(QString("<table align='center'>"
                                  "<tr><td style='color:red; text-align:center; padding: 10px'>"
                                  "<b><i>Disconnected | Error: %1</i></b>"
