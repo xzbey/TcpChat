@@ -14,7 +14,6 @@ class Server: public QTcpServer
     Q_OBJECT
 public:
     Server();
-    ~Server();
 
 private:
     QList<QTcpSocket*> socketList;

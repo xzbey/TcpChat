@@ -1,4 +1,4 @@
-QT       += core gui network
+QT       += core gui network testlib
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -19,7 +19,7 @@ HEADERS += \
 FORMS += \
     mainwindow.ui
 
-INCLUDEPATH += ../common
+INCLUDEPATH += ../common ../testing
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

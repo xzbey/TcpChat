@@ -39,6 +39,8 @@ private slots:
 
     void on_message_textEdited(const QString &arg1);
 
+    void on_changeHostAddress_toggled(bool checked);
+
 private:
     Ui::MainWindow *ui;
     QTcpSocket* socket = 0;
@@ -46,6 +48,11 @@ private:
     Datagram*datagram = 0;
 
     QColor ColorDialog();
+
     void sendToServer();
+    void connect_socket();
+
+    bool isValid(QString str_ip, QHostAddress& address);
+    bool isValid(QString str_port, quint16& port);
 };
 #endif // MAINWINDOW_H

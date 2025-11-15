@@ -1,17 +1,12 @@
 #include "server.h"
 
 Server::Server() {
-    if (this->listen(QHostAddress::Any,50000)) {
-        qDebug() << "server started";
-    }
-    else {
+    if (this->listen(QHostAddress::Any,50000))
+        qDebug() << "server started on port 50000";
+    else
         qDebug() << "error in constructor";
-    }
 }
 
-Server::~Server() {
-
-}
 
 void Server::sendToClient(Datagram* datagram) {
     QByteArray data;
