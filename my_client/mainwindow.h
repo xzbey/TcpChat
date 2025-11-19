@@ -27,11 +27,11 @@ protected:
     void closeEvent(QCloseEvent*) override;
 
 private slots:
+    void slotReadyRead();
+
     void on_btn_connect_clicked();
 
     void on_btn_send_clicked();
-
-    void slotReadyRead();
 
     void on_message_returnPressed();
 

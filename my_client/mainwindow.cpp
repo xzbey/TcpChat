@@ -25,6 +25,38 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+
+QColor MainWindow::ColorDialog() {
+    QColorDialog* ColorDialog = new QColorDialog(this);
+    ColorDialog->exec();
+
+    QColor selectedColor = ColorDialog->selectedColor();
+    delete ColorDialog;
+
+    if (!selectedColor.isValid())
+        selectedColor = Qt::black;
+    return selectedColor;
+}
+
+bool MainWindow::isValid(QString str_ip, QHostAddress& address) {
+    if (!address.setAddress(str_ip)) {
+        qDebug() << "error: invalid ip =" << str_ip;
+        return false;
+    }
+    return true;
+}
+
+bool MainWindow::isValid(QString str_port, quint16& port) {
+    if (str_port.toInt()) {
+        port = str_port.toInt();
+        if (port > 0 and port <= 65535)
+            return true;
+    }
+    qDebug() << "error: invalid port =" << str_port;
+    return false;
+}
+
+
 void MainWindow::connect_socket() {
     socket = new QTcpSocket(this);
 
@@ -89,36 +121,6 @@ void MainWindow::connect_socket() {
 
 }
 
-QColor MainWindow::ColorDialog() {
-    QColorDialog* ColorDialog = new QColorDialog(this);
-    ColorDialog->exec();
-
-    QColor selectedColor = ColorDialog->selectedColor();
-    delete ColorDialog;
-
-    if (!selectedColor.isValid())
-        selectedColor = Qt::black;
-    return selectedColor;
-}
-
-bool MainWindow::isValid(QString str_ip, QHostAddress& address) {
-    if (!address.setAddress(str_ip)) {
-        qDebug() << "error: invalid ip =" << str_ip;
-        return false;
-    }
-    return true;
-}
-
-bool MainWindow::isValid(QString str_port, quint16& port) {
-    if (str_port.toInt()) {
-        port = str_port.toInt();
-        if (port > 0 and port <= 65535)
-            return true;
-    }
-    qDebug() << "error: invalid port =" << str_port;
-    return false;
-}
-
 void MainWindow::slotReadyRead() {
     if (!socket)
         return;
@@ -178,20 +180,17 @@ void MainWindow::on_btn_connect_clicked()
     socket->connectToHost(address, port);
 }
 
-
 void MainWindow::on_btn_send_clicked()
 {
     datagram->Set_message(ui->message->text());
     sendToServer();
 }
 
-
 void MainWindow::on_message_returnPressed()
 {
     datagram->Set_message(ui->message->text());
     sendToServer();
 }
-
 
 void MainWindow::on_newProcess_clicked()
 {
@@ -200,23 +199,10 @@ void MainWindow::on_newProcess_clicked()
     process->start(qApp->applicationFilePath());
 }
 
-void MainWindow::closeEvent(QCloseEvent* e) {
-    if (datagram != nullptr)
-        delete datagram;
-    qDebug() << "datagram deleted";
-
-    for(auto &process : processes)
-        process->terminate();
-    qDebug() << "processes clear";
-
-    QWidget::closeEvent(e);
-}
-
 void MainWindow::on_message_textEdited(const QString &arg1)
 {
     ui->btn_send->setEnabled(!arg1.isEmpty());
 }
-
 
 void MainWindow::on_changeHostAddress_toggled(bool checked)
 {
@@ -229,3 +215,15 @@ void MainWindow::on_changeHostAddress_toggled(bool checked)
     }
 }
 
+
+void MainWindow::closeEvent(QCloseEvent* e) {
+    if (datagram != nullptr)
+        delete datagram;
+    qDebug() << "datagram deleted";
+
+    for(auto &process : processes)
+        process->terminate();
+    qDebug() << "processes clear";
+
+    QWidget::closeEvent(e);
+}
