@@ -120,13 +120,20 @@ void MainWindow::connect_socket() {
 }
 
 void MainWindow::slotReadyRead() {
-    if (!socket)
-        return;
     QDataStream stream(socket);
-    if (stream.status() == QDataStream::Ok) {
-        Datagram data;
-        stream >> data;
-        qDebug() << "datagram receiver" ;
+    while (socket->bytesAvailable() > 0) {
+        if (nextBlockSize == 0) {
+            if (socket->bytesAvailable() < sizeof(quint64))
+                return;
+            stream >> nextBlockSize;
+        }
+
+        if (socket->bytesAvailable() < nextBlockSize)
+            return;
+
+        QByteArray fullBlock = socket->read(nextBlockSize);
+        Datagram data = Datagram::fromByteArray(fullBlock);
+
         if (data.Get_type() == 0) {
             qDebug() << "datagram type - user data";
             qDebug() << "info" << data.Get_name() << data.Get_color().name() << data.Get_message();
@@ -153,8 +160,8 @@ void MainWindow::slotReadyRead() {
                 ui->userList->addItem(userIp);
             }
         }
-    } else {
-        ui->chat->append("read error");
+
+        nextBlockSize = 0;
     }
 }
 
@@ -163,12 +170,13 @@ void MainWindow::sendToServer() {
         qDebug() << "error: cannot send - not connected";
         return;
     }
-    QByteArray data;
+    /*QByteArray data;
     QDataStream stream(&data, QIODevice::WriteOnly);
-    stream << *datagram;
+    stream << *datagram;*/
+    QByteArray data = datagram->toByteArray();
     socket->write(data);
     ui->message->clear();
-    qDebug() << "datagram sended:" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
+    qDebug() << "send" << data.size() << "bytes | datagram:" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
     ui->btn_send->setEnabled(0);
 }
 

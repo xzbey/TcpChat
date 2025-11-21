@@ -15,14 +15,10 @@ Server::Server() {
 
 
 void Server::sendToClient(Datagram* datagram) {
-    QByteArray data;
-    QDataStream stream(&data, QIODevice::WriteOnly);
-    stream << *datagram;
-    //socket->write(data);
+    QByteArray data = datagram->toByteArray();
     qDebug() << "sending datagram for" << socketList.size() << "clients /" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
-    for (auto& it: socketList) {
+    for (auto& it: socketList)
         it->write(data);
-    }
 }
 
 void Server::incomingConnection(qintptr socketDescriptor) {
@@ -45,14 +41,27 @@ void Server::incomingConnection(qintptr socketDescriptor) {
 void Server::slotReadyRead() {
     QTcpSocket* socket = qobject_cast<QTcpSocket*>(sender());
     QDataStream stream(socket);
-    if (stream.status() == QDataStream::Ok) {
-        Datagram* datagram = new Datagram;
-        stream >> *datagram;
-        qDebug() << "reading datagram /" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
+
+    while (1) {
+        if (nextBlockSize == 0) {
+            if (socket->bytesAvailable() < sizeof(quint64))
+                return;
+            stream >> nextBlockSize;
+        }
+
+        if (socket->bytesAvailable() < nextBlockSize)
+            return;
+
+        QByteArray fullBlock = socket->read(nextBlockSize);
+        Datagram* datagram = new Datagram(Datagram::fromByteArray(fullBlock));
+        qDebug() << "received from" << socket->peerAddress().toString()
+                 << "|" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message()
+                 << "msg size:" << datagram->Get_message().size();
+
         sendToClient(datagram);
         delete datagram;
+        nextBlockSize = 0;
     }
-    else qDebug() << "error in slotReadyRead";
 }
 
 void Server::sendClientsList() {
@@ -63,9 +72,7 @@ void Server::sendClientsList() {
     datagram->Set_type(1);
     datagram->Set_list(clientsList);
 
-    QByteArray data;
-    QDataStream stream(&data, QIODevice::WriteOnly);
-    stream << *datagram;
+    QByteArray data = datagram->toByteArray();
     qDebug() << "sending clients list for" << socketList.size() << "clients";
     for (auto& it: socketList)
         it->write(data);

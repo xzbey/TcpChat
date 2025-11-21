@@ -24,6 +24,23 @@ public:
     QColor Get_color() const { return color; }
     QString Get_message() const { return message; }
 
+    QByteArray toByteArray() const {
+        QByteArray data;
+        QDataStream out(&data, QIODevice::WriteOnly);
+        out << quint64(0);
+        out << *this;
+        out.device()->seek(0);
+        out << quint64(data.size() - sizeof(quint64));
+        return data;
+    }
+
+    static Datagram fromByteArray(QByteArray&data) {
+        Datagram datagram;
+        QDataStream in(&data, QIODevice::ReadOnly);
+        in >> datagram;
+        return datagram;
+    }
+
 private:
     bool type; // 0 - датаграмма с данными пользователя | 1 - датаграмма со списком клиентов
     QList<QHostAddress> list;
@@ -42,24 +59,5 @@ private:
     }
 };
 
-/*
-    friend QDataStream &operator<<(QDataStream &out, const Datagram &datagram) {
-    if (datagram.type == 0)
-        out << datagram.type << datagram.name << datagram.color << datagram.message;
-    else
-        out << datagram.type << datagram.list;
-
-    return out;
-}
-
-friend QDataStream &operator>>(QDataStream &in, Datagram &datagram) {
-    if (datagram.type == 0)
-        in >> datagram.type >> datagram.name >> datagram.color >> datagram.message;
-    else
-        in >> datagram.type >> datagram.list;
-
-    return in;
-}
-*/
 
 #endif // DATAGRAM_H
