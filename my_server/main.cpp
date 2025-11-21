@@ -1,10 +1,10 @@
-#include <QCoreApplication>
+#include <QApplication>
 #include "server.h"
 
 int main(int argc, char *argv[])
 {
-    QCoreApplication a(argc, argv);
-    Server *server = new Server();
+    QApplication a(argc, argv);
+    QScopedPointer<Server>server(new Server());
 
     return a.exec();
 }

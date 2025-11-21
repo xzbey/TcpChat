@@ -7,6 +7,9 @@
 #include <QCloseEvent>
 #include <QColorDialog>
 #include <QAbstractSocket>
+#include <QTime>
+#include <QThread>
+#include <QRandomGenerator>
 #include "datagram.h"
 
 QT_BEGIN_NAMESPACE
@@ -39,13 +42,13 @@ private slots:
 
     void on_message_textEdited(const QString &arg1);
 
-    void on_changeHostAddress_toggled(bool checked);
-
 private:
     Ui::MainWindow *ui;
     QTcpSocket* socket = 0;
     QList<QProcess*>processes;
     Datagram*datagram = 0;
+    QRandomGenerator*rg;
+    qint64 nextBlockSize = 0;
 
     QColor ColorDialog();
 

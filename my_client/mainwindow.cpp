@@ -7,6 +7,8 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    rg = QRandomGenerator::global();
+
     ui->name->setPlaceholderText("Имя...");
     ui->message->setPlaceholderText("Сообщение...");
     ui->ip->setPlaceholderText("Ip...");
@@ -14,8 +16,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->message->setEnabled(0);
     ui->btn_send->setEnabled(0);
-    ui->ip->setVisible(0);
-    ui->port->setVisible(0);
 
     connect_socket();
 }
@@ -39,6 +39,11 @@ QColor MainWindow::ColorDialog() {
 }
 
 bool MainWindow::isValid(QString str_ip, QHostAddress& address) {
+    if (str_ip == "") {
+        address = QHostAddress::LocalHost;
+        ui->ip->setText("127.0.0.1");
+        return true;
+    }
     if (!address.setAddress(str_ip)) {
         qDebug() << "error: invalid ip =" << str_ip;
         return false;
@@ -68,9 +73,8 @@ void MainWindow::connect_socket() {
         ui->name->setEnabled(0);
         ui->message->setEnabled(1);
         ui->btn_send->setEnabled(0);
-        ui->ip->setVisible(0);
-        ui->port->setVisible(0);
-        ui->changeHostAddress->setVisible(0);
+        ui->ip->setEnabled(0);
+        ui->port->setEnabled(0);
         ui->chat->append("<table align='center'>"
                          "<tr><td style='color:green; text-align:center; padding: 10px'>"
                          "<b><i>Connected to server.</i></b>"
@@ -82,13 +86,10 @@ void MainWindow::connect_socket() {
         socket = 0;
         ui->message->setEnabled(0);
         ui->name->setEnabled(1);
+        ui->ip->setEnabled(1);
+        ui->port->setEnabled(1);
         ui->btn_connect->setEnabled(1);
         ui->btn_send->setEnabled(0);
-        ui->changeHostAddress->setVisible(1);
-        if (ui->changeHostAddress->isChecked()) {
-            ui->ip->setVisible(1);
-            ui->port->setVisible(1);
-        }
         ui->chat->append("<table align='center'>"
                          "<tr><td style='color:red; text-align:center; padding: 10px'>"
                          "<b><i>Disconnected from server.</i></b>"
@@ -107,11 +108,8 @@ void MainWindow::connect_socket() {
         ui->name->setEnabled(1);
         ui->btn_connect->setEnabled(1);
         ui->btn_send->setEnabled(0);
-        ui->changeHostAddress->setVisible(1);
-        if (ui->changeHostAddress->isChecked()) {
-            ui->ip->setVisible(1);
-            ui->port->setVisible(1);
-        }
+        ui->ip->setEnabled(1);
+        ui->port->setEnabled(1);
         ui->chat->append(QString("<table align='center'>"
                                  "<tr><td style='color:red; text-align:center; padding: 10px'>"
                                  "<b><i>Disconnected | Error: %1</i></b>"
@@ -128,17 +126,33 @@ void MainWindow::slotReadyRead() {
     if (stream.status() == QDataStream::Ok) {
         Datagram data;
         stream >> data;
-        qDebug() << "datagram received:" << data.Get_name() << data.Get_color().name() << data.Get_message();
-        QString align = "left";
-        if (data.Get_name() == ui->name->text())
-            align = "right";
+        qDebug() << "datagram receiver" ;
+        if (data.Get_type() == 0) {
+            qDebug() << "datagram type - user data";
+            qDebug() << "info" << data.Get_name() << data.Get_color().name() << data.Get_message();
+            QString align = "left";
+            if (data.Get_name() == ui->name->text())
+                align = "right";
 
-        ui->chat->append(QString("<table style='border: 2px solid %1; border-collapse: collapse; -qt-table-type: frame; width: 1px; table-layout: fixed' align=%2>"
-                                  "<tr><td style='color:%1; text-align:%2; padding: 10px'>"
-                                  "<b>%3</b><br>%4"
-                                  "</td></tr>"
-                                  "</table>")
-                             .arg(data.Get_color().name()).arg(align).arg(data.Get_name()).arg(data.Get_message()));
+            QString time = QTime::currentTime().toString("hh:mm:ss");
+            ui->chat->append(QString("<table style='border: 2px solid %1; border-collapse: collapse; -qt-table-type: frame; width: 1px; table-layout: fixed' align=%2>"
+                                     "<tr><td style='color:%1; text-align:%2; padding: 10px'>"
+                                     "<b>%3 / %4</b><br>%5"
+                                     "</td></tr>"
+                                     "</table>")
+                                 .arg(data.Get_color().name()).arg(align).arg(data.Get_name()).arg(time).arg(data.Get_message()));
+        }
+        else { // data.type == 1
+            qDebug() << "datagram type - list connections";
+            QString userIp = "-";
+            ui->userList->clear();
+            ui->userList->addItem(QString("User count: %1\n").arg(data.Get_list().count()));
+            for (QHostAddress user: data.Get_list()) {
+                userIp = user.toString().remove(':').remove('f');
+                qDebug() << userIp;
+                ui->userList->addItem(userIp);
+            }
+        }
     } else {
         ui->chat->append("read error");
     }
@@ -162,16 +176,23 @@ void MainWindow::sendToServer() {
 void MainWindow::on_btn_connect_clicked()
 {
     QHostAddress address = QHostAddress::LocalHost; quint16 port = 50000;
-    if (ui->changeHostAddress->isChecked())
-        if (!isValid(ui->ip->text(), address) or !isValid(ui->port->text(), port))
-            return;
+    if (!isValid(ui->ip->text(), address) or !isValid(ui->port->text(), port))
+        return;
 
     qDebug() << "address accepted:" << address.toString() << QString::number(port);
 
     if (datagram != nullptr)
         delete datagram;
 
-    datagram = new Datagram(ui->name->text(), ColorDialog());
+    datagram = new Datagram(0);
+    QString name = ui->name->text().remove(" ");
+    if (name == "") {
+        int id = rg->bounded(1000, 100000);
+        ui->name->setText(QString("user%1").arg(id));
+    }
+    datagram->Set_name(ui->name->text());
+    datagram->Set_color(ColorDialog());
+
     qDebug() << "datagram created:" << datagram->Get_name() << datagram->Get_color().name();
 
     if (!socket)
@@ -203,18 +224,6 @@ void MainWindow::on_message_textEdited(const QString &arg1)
 {
     ui->btn_send->setEnabled(!arg1.isEmpty());
 }
-
-void MainWindow::on_changeHostAddress_toggled(bool checked)
-{
-    if (checked) {
-        ui->ip->setVisible(1);
-        ui->port->setVisible(1);
-    } else {
-        ui->ip->setVisible(0);
-        ui->port->setVisible(0);
-    }
-}
-
 
 void MainWindow::closeEvent(QCloseEvent* e) {
     if (datagram != nullptr)

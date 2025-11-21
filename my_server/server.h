@@ -6,6 +6,9 @@
 #include <QDataStream>
 #include <QObject>
 #include <QCloseEvent>
+#include <QApplication>
+#include <QInputDialog>
+
 #include "datagram.h"
 
 
@@ -17,8 +20,10 @@ public:
 
 private:
     QList<QTcpSocket*> socketList;
+    QMap<QTcpSocket*, QString> userList;
 
     void sendToClient(Datagram* datagram);
+    void sendClientsList();
 
 public slots:
     void incomingConnection(qintptr socketDescriptor);

@@ -1,8 +1,14 @@
 #include "server.h"
 
 Server::Server() {
-    if (this->listen(QHostAddress::Any,50000))
-        qDebug() << "server started on port 50000";
+    bool ok;
+    quint16 port = QInputDialog::getInt(nullptr, "Enter port", "Server stated on port:", 50000, 1, 65535, 1, &ok);
+    if (!ok) {
+        qDebug() << "server not started";
+        exit(0);
+    }
+    if (this->listen(QHostAddress::Any,port))
+        qDebug() << "server started on port" << port;
     else
         qDebug() << "error in constructor";
 }
@@ -28,10 +34,12 @@ void Server::incomingConnection(qintptr socketDescriptor) {
         qDebug() << "one disconnect / size: " << socketList.size() - 1;
         socketList.removeOne(socket);
         socket->deleteLater();
+        sendClientsList();
     });
 
     socketList.append(socket);
     qDebug() << "new connection / size:" << socketList.size();
+    sendClientsList();
 }
 
 void Server::slotReadyRead() {
@@ -44,8 +52,22 @@ void Server::slotReadyRead() {
         sendToClient(datagram);
         delete datagram;
     }
-    else {
-        qDebug() << "error in slotReadyRead";
-    }
+    else qDebug() << "error in slotReadyRead";
+}
 
+void Server::sendClientsList() {
+    QList<QHostAddress> clientsList;
+    for (auto&it:socketList)
+        clientsList.append(it->peerAddress());
+    Datagram* datagram = new Datagram;
+    datagram->Set_type(1);
+    datagram->Set_list(clientsList);
+
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+    stream << *datagram;
+    qDebug() << "sending clients list for" << socketList.size() << "clients";
+    for (auto& it: socketList)
+        it->write(data);
+    delete datagram;
 }
