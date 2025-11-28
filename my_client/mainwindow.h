@@ -10,6 +10,11 @@
 #include <QTime>
 #include <QThread>
 #include <QRandomGenerator>
+#include <QFileDialog>
+#include <QDir>
+#include <QBuffer>
+#include <QInputDialog>
+#include <QMessageBox>
 #include "datagram.h"
 
 QT_BEGIN_NAMESPACE
@@ -41,6 +46,9 @@ private slots:
     void on_newProcess_clicked();
 
     void on_message_textEdited(const QString &arg1);
+
+    void on_select_avatar_clicked();
+
 
 private:
     Ui::MainWindow *ui;

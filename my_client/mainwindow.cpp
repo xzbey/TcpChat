@@ -16,6 +16,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->message->setEnabled(0);
     ui->btn_send->setEnabled(0);
+    ui->select_avatar->setEnabled(0);
+
+    QImage img(164, 164, QImage::Format_RGB32);
+    img.fill("#435A9A");
+    ui->avatar_label->setPixmap(QPixmap::fromImage(img));
+    ui->avatar_label->setFixedSize(164, 164);
 
     connect_socket();
 }
@@ -75,6 +81,7 @@ void MainWindow::connect_socket() {
         ui->btn_send->setEnabled(0);
         ui->ip->setEnabled(0);
         ui->port->setEnabled(0);
+        ui->select_avatar->setEnabled(1);
         ui->chat->append("<table align='center'>"
                          "<tr><td style='color:green; text-align:center; padding: 10px'>"
                          "<b><i>Connected to server.</i></b>"
@@ -90,6 +97,7 @@ void MainWindow::connect_socket() {
         ui->port->setEnabled(1);
         ui->btn_connect->setEnabled(1);
         ui->btn_send->setEnabled(0);
+        ui->select_avatar->setEnabled(0);
         ui->chat->append("<table align='center'>"
                          "<tr><td style='color:red; text-align:center; padding: 10px'>"
                          "<b><i>Disconnected from server.</i></b>"
@@ -110,6 +118,8 @@ void MainWindow::connect_socket() {
         ui->btn_send->setEnabled(0);
         ui->ip->setEnabled(1);
         ui->port->setEnabled(1);
+        ui->select_avatar->setEnabled(0);
+
         ui->chat->append(QString("<table align='center'>"
                                  "<tr><td style='color:red; text-align:center; padding: 10px'>"
                                  "<b><i>Disconnected | Error: %1</i></b>"
@@ -137,23 +147,31 @@ void MainWindow::slotReadyRead() {
         if (data.Get_type() == 0) {
             qDebug() << "datagram type - user data";
             qDebug() << "info" << data.Get_name() << data.Get_color().name() << data.Get_message();
+
             QString align = "left";
             if (data.Get_name() == ui->name->text())
                 align = "right";
 
+            QImage image;
+            image.loadFromData(data.Get_avatar());
+            QTextDocument *doc = ui->chat->document();
+            QString imageKey = data.Get_name() + "_" + QString::number(reinterpret_cast<quintptr>(&image), 16);
+            doc->addResource(QTextDocument::ImageResource, QUrl(imageKey), image);
+
             QString time = QTime::currentTime().toString("hh:mm:ss");
             ui->chat->append(QString("<table style='border: 2px solid %1; border-collapse: collapse; -qt-table-type: frame; width: 1px; table-layout: fixed' align=%2>"
                                      "<tr><td style='color:%1; text-align:%2; padding: 10px'>"
-                                     "<b>%3 / %4</b><br>%5"
+                                     "<b>%3 / %4</b><br>"
+                                     "<img src='%6' style='max-width:10%; max-height:10%'><br>%5"
                                      "</td></tr>"
                                      "</table>")
-                                 .arg(data.Get_color().name()).arg(align).arg(data.Get_name()).arg(time).arg(data.Get_message()));
+                                 .arg(data.Get_color().name()).arg(align).arg(data.Get_name()).arg(time).arg(data.Get_message()).arg(imageKey));
         }
         else { // data.type == 1
             qDebug() << "datagram type - list connections";
             QString userIp = "-";
             ui->userList->clear();
-            ui->userList->addItem(QString("User count: %1\n").arg(data.Get_list().count()));
+            ui->userList->addItem(QString("Подключенных: %1\n").arg(data.Get_list().count()));
             for (QHostAddress user: data.Get_list()) {
                 userIp = user.toString().remove(':').remove('f');
                 qDebug() << userIp;
@@ -193,13 +211,22 @@ void MainWindow::on_btn_connect_clicked()
         delete datagram;
 
     datagram = new Datagram(0);
-    QString name = ui->name->text().remove(" ");
+    QString name = ui->name->text().trimmed();
     if (name == "") {
         int id = rg->bounded(1000, 100000);
         ui->name->setText(QString("user%1").arg(id));
     }
     datagram->Set_name(ui->name->text());
     datagram->Set_color(ColorDialog());
+
+    QByteArray imageData;
+    QBuffer imageBuffer(&imageData);
+    QImage img(164, 164, QImage::Format_RGB32);
+    img.fill("#435A9A");
+    img.save(&imageBuffer, "JPG", 80);
+    imageBuffer.close();
+    datagram->Set_avatar(imageData);
+
 
     qDebug() << "datagram created:" << datagram->Get_name() << datagram->Get_color().name();
 
@@ -233,6 +260,22 @@ void MainWindow::on_message_textEdited(const QString &arg1)
     ui->btn_send->setEnabled(!arg1.isEmpty());
 }
 
+void MainWindow::on_select_avatar_clicked()
+{
+    QString filename = QFileDialog::getOpenFileName(this, "Open file", QDir::homePath(), "Images (*.png *.xpm *.jpg)");
+    ui->avatar_label->setPixmap(QPixmap(filename));
+    ui->avatar_label->setScaledContents(1);
+    ui->avatar_label->setFixedSize(164, 164);
+
+    QByteArray imageData;
+    QBuffer imageBuffer(&imageData);
+    QImage image = ui->avatar_label->pixmap().toImage();
+    image.save(&imageBuffer, "JPG", 80);
+    imageBuffer.close();
+    datagram->Set_avatar(imageData);
+}
+
+
 void MainWindow::closeEvent(QCloseEvent* e) {
     if (datagram != nullptr)
         delete datagram;
@@ -244,3 +287,7 @@ void MainWindow::closeEvent(QCloseEvent* e) {
 
     QWidget::closeEvent(e);
 }
+
+
+
+
