@@ -20,7 +20,6 @@ public:
 
 private:
     QList<QTcpSocket*> socketList;
-    QMap<QTcpSocket*, QString> userList;
     quint64 nextBlockSize = 0;
 
     void sendToClient(Datagram* datagram);

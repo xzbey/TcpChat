@@ -16,7 +16,8 @@ Server::Server() {
 
 void Server::sendToClient(Datagram* datagram) {
     QByteArray data = datagram->toByteArray();
-    qDebug() << "sending datagram for" << socketList.size() << "clients /" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message();
+    qDebug() << "socket list size:" << socketList.size();
+    qDebug() << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message() << datagram->Get_recipient();
     for (auto& it: socketList)
         it->write(data);
 }
@@ -56,7 +57,9 @@ void Server::slotReadyRead() {
         Datagram* datagram = new Datagram(Datagram::fromByteArray(fullBlock));
         qDebug() << "received from" << socket->peerAddress().toString()
                  << "|" << datagram->Get_name() << datagram->Get_color().name() << datagram->Get_message()
+                 << "msg for" << datagram->Get_recipient()
                  << "msg size:" << datagram->Get_message().size();
+
 
         sendToClient(datagram);
         delete datagram;

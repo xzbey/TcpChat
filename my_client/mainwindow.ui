@@ -25,13 +25,13 @@
      <rect>
       <x>551</x>
       <y>9</y>
-      <width>151</width>
+      <width>155</width>
       <height>611</height>
      </rect>
     </property>
     <property name="minimumSize">
      <size>
-      <width>151</width>
+      <width>155</width>
       <height>200</height>
      </size>
     </property>
@@ -49,7 +49,7 @@
      </font>
     </property>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>9</x>
@@ -266,7 +266,7 @@
      </item>
     </layout>
    </widget>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>170</x>

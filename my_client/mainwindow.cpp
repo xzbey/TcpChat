@@ -19,11 +19,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->select_avatar->setEnabled(0);
 
     QImage img(164, 164, QImage::Format_RGB32);
-    img.fill("#435A9A");
+    //img.fill("#000000");
     ui->avatar_label->setPixmap(QPixmap::fromImage(img));
     ui->avatar_label->setFixedSize(164, 164);
 
     connect_socket();
+    connect(ui->message, &QLineEdit::returnPressed, this, &MainWindow::trySendMessage);
+    connect(ui->btn_send, &QPushButton::clicked, this, &MainWindow::trySendMessage);
 }
 
 MainWindow::~MainWindow()
@@ -148,6 +150,23 @@ void MainWindow::slotReadyRead() {
             qDebug() << "datagram type - user data";
             qDebug() << "info" << data.Get_name() << data.Get_color().name() << data.Get_message();
 
+            if (blacklist.contains(data.Get_name())) {
+                qDebug() << "[Заблокировано]";
+                nextBlockSize = 0;
+                return;
+            }
+
+            QString recipient = data.Get_recipient();
+            if (!recipient.isEmpty() and recipient != "@a") {
+                if (recipient == ui->name->text())
+                    data.Set_message("<b>[ЛС]</b> " + data.Get_message());
+                else {
+                    qDebug() << "[Заблокировано]";
+                    nextBlockSize = 0;
+                    return;
+                }
+            }
+
             QString align = "left";
             if (data.Get_name() == ui->name->text())
                 align = "right";
@@ -222,7 +241,8 @@ void MainWindow::on_btn_connect_clicked()
     QByteArray imageData;
     QBuffer imageBuffer(&imageData);
     QImage img(164, 164, QImage::Format_RGB32);
-    img.fill("#435A9A");
+    img.fill(datagram->Get_color());
+    ui->avatar_label->setPixmap(QPixmap::fromImage(img));
     img.save(&imageBuffer, "JPG", 80);
     imageBuffer.close();
     datagram->Set_avatar(imageData);
@@ -236,17 +256,104 @@ void MainWindow::on_btn_connect_clicked()
     socket->connectToHost(address, port);
 }
 
-void MainWindow::on_btn_send_clicked()
-{
-    datagram->Set_message(ui->message->text());
-    sendToServer();
+
+void MainWindow::trySendMessage() {
+    QString message = ui->message->text().trimmed();
+    ui->message->clear();
+
+    if (message == "")
+        return;
+
+    if (message.startsWith('/'))
+        commandProcessing(message);
+    else {
+        datagram->Set_message(message);
+        sendToServer();
+    }
 }
 
-void MainWindow::on_message_returnPressed()
-{
-    datagram->Set_message(ui->message->text());
-    sendToServer();
+void MainWindow::warning_nullFunc(const QString& command) const {
+    ui->chat->append(QString("<i style='color: gray'>Пустая команда [%1]!</i>").arg(command));
 }
+
+void MainWindow::commandProcessing(const QString& message) { // /mute & /msg
+    QStringList commandParts = message.split(' ', Qt::SkipEmptyParts);
+    if (commandParts.isEmpty())
+        return;
+
+
+    QString command = commandParts[0].toLower();
+    commandParts.pop_front();
+
+    if (command == "/mute") {
+        if (commandParts.isEmpty()) {
+            warning_nullFunc("/mute");
+            return; }
+        if (commandParts[0] == ui->name->text()) {
+            ui->chat->append("<i style='color: gray'><b>[mute]</b> Вы не можете замутить самого себя!</i>");
+            return; }
+
+        blacklist.insert(commandParts[0]);
+        ui->chat->append(QString("<i style='color: gray'><b>[mute]</b> Вы замутили %1!</i>").arg(commandParts[0]));
+    }
+
+    else if (command == "/unmute") {
+        if (commandParts.isEmpty()) {
+            warning_nullFunc("/unmute");
+            return; }
+
+        if (commandParts[0] == "@a") {
+            blacklist.clear();
+            ui->chat->append("<i style='color: gray'><b>[unmute]</b> Все пользователи удалены из мута!</i>");
+            return; }
+
+        if (commandParts[0] == ui->name->text()) {
+            ui->chat->append("<i style='color: gray'><b>[unmute]</b> Вы не можете размутить самого себя!</i>");
+            return; }
+
+        int ok = blacklist.remove(commandParts[0]);
+        if (ok == 0)
+            ui->chat->append("<i style='color: gray'><b>[unmute]</b> Пользователя не существует!</i>");
+        else
+            ui->chat->append(QString("<i style='color: gray'><b>[unmute]</b> Пользователь %1 успешно убран из мута!</i>")
+                                 .arg(commandParts[0]));
+    }
+
+    else if (command == "/mutelist") {
+        if (blacklist.isEmpty())
+            ui->chat->append("<i style='color: gray'><b>[mutelist]</b> Список пуст!</i>");
+        else {
+            ui->chat->append("<i style='color: gray'><b>[mutelist]</b> <u>Черный список:</u></i>");
+            for (QString user: blacklist)
+                ui->chat->append(QString("<i style='color: gray'><b>[mutelist]</b> %1</i>").arg(user));
+            ui->chat->append(QString("<i style='color: gray'><b>[mutelist]</b> Количество: %1</i>").arg(blacklist.size()));
+        }
+    }
+
+    else if (command == "/msg") {
+        if (commandParts.size() < 2) {
+            ui->chat->append("<i style='color: gray'><b>[msg]</b> Пустое сообщение или ник!</i>");
+            return; }
+        if (commandParts[0] == ui->name->text()) {
+            ui->chat->append("<i style='color: gray'><b>[msg]</b> Вы не можете отправить личное сообщение самому себе!</i>");
+            return;
+        }
+
+        QString user = commandParts[0],
+            text = commandParts.mid(1).join(' ');
+        datagram->Set_recipient(user);
+        datagram->Set_message(text);
+        sendToServer();
+        datagram->Set_recipient("");
+        ui->chat->append(QString("<i style='color: gray'><b>[msg]</b> Отправлено личное сообщение %1: %2</i>").arg(user).arg(text));
+    }
+
+    else
+        ui->chat->append("<i style='color: gray'>Неизвестная команда!</i>");
+
+
+}
+
 
 void MainWindow::on_newProcess_clicked()
 {
@@ -262,7 +369,7 @@ void MainWindow::on_message_textEdited(const QString &arg1)
 
 void MainWindow::on_select_avatar_clicked()
 {
-    QString filename = QFileDialog::getOpenFileName(this, "Open file", QDir::homePath(), "Images (*.png *.xpm *.jpg)");
+    QString filename = QFileDialog::getOpenFileName(this, "Open file", QDir::homePath(), "Images (*.png *.jpg)");
     ui->avatar_label->setPixmap(QPixmap(filename));
     ui->avatar_label->setScaledContents(1);
     ui->avatar_label->setFixedSize(164, 164);

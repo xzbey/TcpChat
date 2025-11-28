@@ -39,10 +39,6 @@ private slots:
 
     void on_btn_connect_clicked();
 
-    void on_btn_send_clicked();
-
-    void on_message_returnPressed();
-
     void on_newProcess_clicked();
 
     void on_message_textEdited(const QString &arg1);
@@ -52,16 +48,24 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+
     QTcpSocket* socket = 0;
     QList<QProcess*>processes;
+
     Datagram*datagram = 0;
     QRandomGenerator*rg;
+
     qint64 nextBlockSize = 0;
+
+    QSet<QString>blacklist;
 
     QColor ColorDialog();
 
     void sendToServer();
     void connect_socket();
+    void trySendMessage();
+    void commandProcessing(const QString &message);
+    inline void warning_nullFunc(const QString &command) const;
 
     bool isValid(QString str_ip, QHostAddress& address);
     bool isValid(QString str_port, quint16& port);
