@@ -7,8 +7,8 @@
 
 class Datagram {
 public:
-    Datagram(bool type, QList<QHostAddress> list, QString name = "Null_", QColor color = "#000000", QString message = "None", QByteArray imageData = nullptr):
-        type(type), list(list), name(name), color(color), message(message), imageData(imageData) {}
+    Datagram(bool type, QList<QHostAddress> list, QString name = "Null_", QColor color = "#000000", QString message = "None", QByteArray imageData = nullptr, QString recipient = ""):
+        type(type), list(list), name(name), color(color), message(message), imageData(imageData), recipient(recipient) {}
     Datagram(bool type):
         type(type), name("---"), color("#000000"), message("---") {}
     Datagram() {}
@@ -19,6 +19,7 @@ public:
     void Set_color(QColor color) { this->color = color; }
     void Set_message(QString message) { this->message = message; }
     void Set_avatar(QByteArray avatar) { this->imageData = avatar; }
+    void Set_recipient(QString recipient) { this->recipient = recipient; }
 
     bool Get_type() const { return type; }
     QList<QHostAddress> Get_list() const { return list; }
@@ -26,6 +27,7 @@ public:
     QColor Get_color() const { return color; }
     QString Get_message() const { return message; }
     QByteArray Get_avatar() const { return imageData; }
+    QString Get_recipient() const { return recipient; }
 
 
     QByteArray toByteArray() const {
@@ -52,14 +54,15 @@ private:
     QColor color;
     QString message;
     QByteArray imageData;
+    QString recipient;
 
     friend QDataStream &operator<<(QDataStream &out, const Datagram &datagram) {
-        out << datagram.type << datagram.list << datagram.name << datagram.color << datagram.message << datagram.imageData;
+        out << datagram.type << datagram.list << datagram.name << datagram.color << datagram.message << datagram.imageData << datagram.recipient;
         return out;
     }
 
     friend QDataStream &operator>>(QDataStream &in, Datagram &datagram) {
-        in >> datagram.type >> datagram.list >> datagram.name >> datagram.color >> datagram.message >> datagram.imageData;
+        in >> datagram.type >> datagram.list >> datagram.name >> datagram.color >> datagram.message >> datagram.imageData >> datagram.recipient;
         return in;
     }
 };
