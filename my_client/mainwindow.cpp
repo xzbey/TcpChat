@@ -107,28 +107,30 @@ void MainWindow::connect_socket() {
                          "</table>");
 
     });
-    connect(socket, &QAbstractSocket::errorOccurred, this, [this]() {
-        if (!socket) {
-            qDebug() << "error after disconnect (ignored)";
-            return;
-        }
+    connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(socketError(QAbstractSocket::SocketError)));
 
-        qDebug() << "socket error:" << socket->errorString();
-        ui->message->setEnabled(0);
-        ui->name->setEnabled(1);
-        ui->btn_connect->setEnabled(1);
-        ui->btn_send->setEnabled(0);
-        ui->ip->setEnabled(1);
-        ui->port->setEnabled(1);
-        ui->select_avatar->setEnabled(0);
+}
 
-        ui->chat->append(QString("<table align='center'>"
-                                 "<tr><td style='color:red; text-align:center; padding: 10px'>"
-                                 "<b><i>Disconnected | Error: %1</i></b>"
-                                 "</td></tr>"
-                                 "</table>").arg(socket->errorString()));
-    });
+void MainWindow::socketError(QAbstractSocket::SocketError error) {
+    if (!socket) {
+        qDebug() << "error after disconnect (ignored)";
+        return;
+    }
 
+    qDebug() << "socket error:" << socket->errorString();
+    ui->message->setEnabled(0);
+    ui->name->setEnabled(1);
+    ui->btn_connect->setEnabled(1);
+    ui->btn_send->setEnabled(0);
+    ui->ip->setEnabled(1);
+    ui->port->setEnabled(1);
+    ui->select_avatar->setEnabled(0);
+
+    ui->chat->append(QString("<table align='center'>"
+                             "<tr><td style='color:red; text-align:center; padding: 10px'>"
+                             "<b><i>Disconnected | Error: %1</i></b>"
+                             "</td></tr>"
+                             "</table>").arg(socket->errorString()));
 }
 
 void MainWindow::slotReadyRead() {
@@ -278,6 +280,7 @@ void MainWindow::warning_nullFunc(const QString& command) const {
 
 void MainWindow::commandProcessing(const QString& message) { // /mute & /msg
     QStringList commandParts = message.split(' ', Qt::SkipEmptyParts);
+    // QStringList commandParts = message.split(' '); //для qt 4.8.1
     if (commandParts.isEmpty())
         return;
 

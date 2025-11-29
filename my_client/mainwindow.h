@@ -66,6 +66,7 @@ private:
     void trySendMessage();
     void commandProcessing(const QString &message);
     inline void warning_nullFunc(const QString &command) const;
+    void socketError(QAbstractSocket::SocketError error);
 
     bool isValid(QString str_ip, QHostAddress& address);
     bool isValid(QString str_port, quint16& port);
